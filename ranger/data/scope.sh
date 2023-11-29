@@ -26,11 +26,22 @@ IFS=$'\n'
 ## 5    | fix both   | Don't ever reload
 ## 6    | image      | Display the image `$IMAGE_CACHE_PATH` points to as an image preview
 ## 7    | image      | Display the file directly as an image
+# shellcheck disable=SC2034
+yes=0
+no=1
+text=2
+# shellcheck disable=SC2034
+yesw=3
+# shellcheck disable=SC2034
+yesh=4
+yeswh=5
+imgc=6
+imgf=7
 
 ## Script arguments
 FILE_PATH="${1}"         # Full path of the highlighted file
 PV_WIDTH="${2}"          # Width of the preview pane (number of fitting characters)
-## shellcheck disable=SC2034 # PV_HEIGHT is provided for convenience and unused
+# shellcheck disable=SC2034 # PV_HEIGHT is provided for convenience and unused
 PV_HEIGHT="${3}"         # Height of the preview pane (number of fitting characters)
 IMAGE_CACHE_PATH="${4}"  # Full path that should be used to cache image preview
 PV_IMAGE_ENABLED="${5}"  # 'True' if image previews are enabled, 'False' otherwise.
@@ -39,7 +50,7 @@ FILE_EXTENSION="${FILE_PATH##*.}"
 FILE_EXTENSION_LOWER="$(printf "%s" "${FILE_EXTENSION}" | tr '[:upper:]' '[:lower:]')"
 
 ## Settings
-HIGHLIGHT_SIZE_MAX=262143  # 256KiB
+HIGHLIGHT_SIZE_MAX=262143  # 256KiB - 1B
 HIGHLIGHT_TABWIDTH="${HIGHLIGHT_TABWIDTH:-8}"
 HIGHLIGHT_STYLE="${HIGHLIGHT_STYLE:-pablo}"
 HIGHLIGHT_OPTIONS="--replace-tabs=${HIGHLIGHT_TABWIDTH} --style=${HIGHLIGHT_STYLE} ${HIGHLIGHT_OPTIONS:-}"
@@ -55,80 +66,80 @@ handle_extension() {
         ## Archive
         a|ace|alz|arc|arj|bz|bz2|cab|cpio|deb|gz|jar|lha|lz|lzh|lzma|lzo|\
         rpm|rz|t7z|tar|tbz|tbz2|tgz|tlz|txz|tZ|tzo|war|xpi|xz|Z|zip)
-            atool --list -- "${FILE_PATH}" && exit 5
-            bsdtar --list --file "${FILE_PATH}" && exit 5
-            exit 1;;
+            atool --list -- "${FILE_PATH}" && exit $yeswh
+            bsdtar --list --file "${FILE_PATH}" && exit $yeswh
+            exit $no;;
         rar)
             ## Avoid password prompt by providing empty password
-            unrar lt -p- -- "${FILE_PATH}" && exit 5
-            exit 1;;
+            unrar lt -p- -- "${FILE_PATH}" && exit $yeswh
+            exit $no;;
         7z)
             ## Avoid password prompt by providing empty password
-            7z l -p -- "${FILE_PATH}" && exit 5
-            exit 1;;
+            7z l -p -- "${FILE_PATH}" && exit $yeswh
+            exit $no;;
 
         ## PDF
         pdf)
             ## Preview as text conversion
             pdftotext -l 10 -nopgbrk -q -- "${FILE_PATH}" - | \
-              fmt -w "${PV_WIDTH}" && exit 5
+              fmt -w "${PV_WIDTH}" && exit $yeswh
             mutool draw -F txt -i -- "${FILE_PATH}" 1-10 | \
-              fmt -w "${PV_WIDTH}" && exit 5
-            exiftool "${FILE_PATH}" && exit 5
-            exit 1;;
+              fmt -w "${PV_WIDTH}" && exit $yeswh
+            exiftool "${FILE_PATH}" && exit $yeswh
+            exit $no;;
 
         ## BitTorrent
         torrent)
-            transmission-show -- "${FILE_PATH}" && exit 5
-            exit 1;;
+            transmission-show -- "${FILE_PATH}" && exit $yeswh
+            exit $no;;
 
         ## OpenDocument
         odt|sxw)
             ## Preview as text conversion
-            odt2txt "${FILE_PATH}" && exit 5
+            odt2txt "${FILE_PATH}" && exit $yeswh
             ## Preview as markdown conversion
-            pandoc -s -t markdown -- "${FILE_PATH}" && exit 5
-            exit 1;;
+            pandoc -s -t markdown -- "${FILE_PATH}" && exit $yeswh
+            exit $no;;
         ods|odp)
             ## Preview as text conversion (unsupported by pandoc for markdown)
-            odt2txt "${FILE_PATH}" && exit 5
-            exit 1;;
+            odt2txt "${FILE_PATH}" && exit $yeswh
+            exit $no;;
 
         ## XLSX
         xlsx)
             ## Preview as csv conversion
             ## Uses: https://github.com/dilshod/xlsx2csv
-            xlsx2csv -- "${FILE_PATH}" && exit 5
-            exit 1;;
+            xlsx2csv -- "${FILE_PATH}" && exit $yeswh
+            exit $no;;
 
         ## HTML
         htm|html|xhtml)
             ## Preview as text conversion
-            w3m -dump "${FILE_PATH}" && exit 5
-            lynx -dump -- "${FILE_PATH}" && exit 5
-            elinks -dump "${FILE_PATH}" && exit 5
-            pandoc -s -t markdown -- "${FILE_PATH}" && exit 5
+            w3m -dump "${FILE_PATH}" && exit $yeswh
+            lynx -dump -- "${FILE_PATH}" && exit $yeswh
+            elinks -dump "${FILE_PATH}" && exit $yeswh
+            pandoc -s -t markdown -- "${FILE_PATH}" && exit $yeswh
             ;;
 
         ## JSON
         json)
-            jq --color-output . "${FILE_PATH}" && exit 5
-            python -m json.tool -- "${FILE_PATH}" && exit 5
+            jq --color-output . "${FILE_PATH}" && exit $yeswh
+            python -m json.tool -- "${FILE_PATH}" && exit $yeswh
             ;;
 
         ## Jupyter Notebooks
         ipynb)
-            jupyter nbconvert --to markdown "${FILE_PATH}" --stdout | env COLORTERM=8bit bat --color=always --style=plain --language=markdown && exit 5
-            jupyter nbconvert --to markdown "${FILE_PATH}" --stdout && exit 5
-            jq --color-output . "${FILE_PATH}" && exit 5
-            python -m json.tool -- "${FILE_PATH}" && exit 5
+            jupyter nbconvert --to markdown "${FILE_PATH}" --stdout | env COLORTERM=8bit bat --color=always --style=plain --language=markdown && exit $yeswh
+            jupyter nbconvert --to markdown "${FILE_PATH}" --stdout && exit $yeswh
+            jq --color-output . "${FILE_PATH}" && exit $yeswh
+            python -m json.tool -- "${FILE_PATH}" && exit $yeswh
             ;;
 
         ## Direct Stream Digital/Transfer (DSDIFF) and wavpack aren't detected
         ## by file(1).
         dff|dsf|wv|wvc)
-            mediainfo "${FILE_PATH}" && exit 5
-            exiftool "${FILE_PATH}" && exit 5
+            mediainfo "${FILE_PATH}" && exit $yeswh
+            exiftool "${FILE_PATH}" && exit $yeswh
             ;; # Continue with next handler on failure
     esac
 }
@@ -146,14 +157,14 @@ handle_image() {
         image/svg+xml|image/svg)
             rsvg-convert --keep-aspect-ratio --width "${DEFAULT_SIZE%x*}" "${FILE_PATH}" -o "${IMAGE_CACHE_PATH}.png" \
                 && mv "${IMAGE_CACHE_PATH}.png" "${IMAGE_CACHE_PATH}" \
-                && exit 6
-            exit 1;;
+                && exit $imgc
+            exit $no;;
 
         ## DjVu
         image/vnd.djvu)
             ddjvu -format=tiff -quality=90 -page=1 -size="${DEFAULT_SIZE}" \
                   - "${IMAGE_CACHE_PATH}" < "${FILE_PATH}" \
-                  && exit 6 || exit 1;;
+                  && exit $imgc || exit $no;;
 
         ## Image
         image/*)
@@ -163,26 +174,26 @@ handle_image() {
             ## needs rotating ("1" means no rotation)...
             if [[ -n "$orientation" && "$orientation" != 1 ]]; then
                 ## ...auto-rotate the image according to the EXIF data.
-                convert -- "${FILE_PATH}" -auto-orient "${IMAGE_CACHE_PATH}" && exit 6
+                convert -- "${FILE_PATH}" -auto-orient "${IMAGE_CACHE_PATH}" && exit $imgc
             fi
 
             ## `w3mimgdisplay` will be called for all images (unless overridden
             ## as above), but might fail for unsupported types.
-            exit 7;;
+            exit $imgf;;
 
         ## Video
         # video/*)
         #     # Get embedded thumbnail
-        #     ffmpeg -i "${FILE_PATH}" -map 0:v -map -0:V -c copy "${IMAGE_CACHE_PATH}" && exit 6
+        #     ffmpeg -i "${FILE_PATH}" -map 0:v -map -0:V -c copy "${IMAGE_CACHE_PATH}" && exit $imgc
         #     # Get frame 10% into video
-        #     ffmpegthumbnailer -i "${FILE_PATH}" -o "${IMAGE_CACHE_PATH}" -s 0 && exit 6
-        #     exit 1;;
+        #     ffmpegthumbnailer -i "${FILE_PATH}" -o "${IMAGE_CACHE_PATH}" -s 0 && exit $imgc
+        #     exit $no;;
 
         ## Audio
         # audio/*)
         #     # Get embedded thumbnail
         #     ffmpeg -i "${FILE_PATH}" -map 0:v -map -0:V -c copy \
-        #       "${IMAGE_CACHE_PATH}" && exit 6;;
+        #       "${IMAGE_CACHE_PATH}" && exit $imgc;;
 
         ## PDF
         # application/pdf)
@@ -192,7 +203,7 @@ handle_image() {
         #              -singlefile \
         #              -jpeg -tiffcompression jpeg \
         #              -- "${FILE_PATH}" "${IMAGE_CACHE_PATH%.*}" \
-        #         && exit 6 || exit 1;;
+        #         && exit $imgc || exit $no;;
 
 
         ## ePub, MOBI, FB2 (using Calibre)
@@ -200,10 +211,10 @@ handle_image() {
         # application/x-fictionbook+xml)
         #     # ePub (using https://github.com/marianosimone/epub-thumbnailer)
         #     epub-thumbnailer "${FILE_PATH}" "${IMAGE_CACHE_PATH}" \
-        #         "${DEFAULT_SIZE%x*}" && exit 6
+        #         "${DEFAULT_SIZE%x*}" && exit $imgc
         #     ebook-meta --get-cover="${IMAGE_CACHE_PATH}" -- "${FILE_PATH}" \
-        #         >/dev/null && exit 6
-        #     exit 1;;
+        #         >/dev/null && exit $imgc
+        #     exit $no;;
 
         ## Font
         application/font*|application/*opentype)
@@ -220,9 +231,9 @@ handle_image() {
             then
                 convert -- "${preview_png}" "${IMAGE_CACHE_PATH}" \
                     && rm "${preview_png}" \
-                    && exit 6
+                    && exit $imgc
             else
-                exit 1
+                exit $no
             fi
             ;;
 
@@ -252,15 +263,15 @@ handle_image() {
         #     [ "$bsd" ] && fn=$(printf '%b' "$fn")
         #
         #     [ "$tar" ] && tar --extract --to-stdout \
-        #         --file "${FILE_PATH}" -- "$fn" > "${IMAGE_CACHE_PATH}" && exit 6
+        #         --file "${FILE_PATH}" -- "$fn" > "${IMAGE_CACHE_PATH}" && exit $imgc
         #     fe=$(echo -n "$fn" | sed 's/[][*?\]/\\\0/g')
         #     [ "$bsd" ] && bsdtar --extract --to-stdout \
-        #         --file "${FILE_PATH}" -- "$fe" > "${IMAGE_CACHE_PATH}" && exit 6
+        #         --file "${FILE_PATH}" -- "$fe" > "${IMAGE_CACHE_PATH}" && exit $imgc
         #     [ "$bsd" ] || [ "$tar" ] && rm -- "${IMAGE_CACHE_PATH}"
         #     [ "$rar" ] && unrar p -p- -inul -- "${FILE_PATH}" "$fn" > \
-        #         "${IMAGE_CACHE_PATH}" && exit 6
+        #         "${IMAGE_CACHE_PATH}" && exit $imgc
         #     [ "$zip" ] && unzip -pP "" -- "${FILE_PATH}" "$fe" > \
-        #         "${IMAGE_CACHE_PATH}" && exit 6
+        #         "${IMAGE_CACHE_PATH}" && exit $imgc
         #     [ "$rar" ] || [ "$zip" ] && rm -- "${IMAGE_CACHE_PATH}"
         #     ;;
     esac
@@ -280,15 +291,15 @@ handle_image() {
        ## move/rename it to jpg. This works because image libraries are
        ## smart enough to handle it.
        # csg|scad)
-       #     openscad_image "${FILE_PATH}" && exit 6
+       #     openscad_image "${FILE_PATH}" && exit $imgc
        #     ;;
        # 3mf|amf|dxf|off|stl)
-       #     openscad_image <(echo "import(\"${FILE_PATH}\");") && exit 6
+       #     openscad_image <(echo "import(\"${FILE_PATH}\");") && exit $imgc
        #     ;;
        drawio)
            draw.io -x "${FILE_PATH}" -o "${IMAGE_CACHE_PATH}" \
-               --width "${DEFAULT_SIZE%x*}" && exit 6
-           exit 1;;
+               --width "${DEFAULT_SIZE%x*}" && exit $imgc
+           exit $no;;
     esac
 }
 
@@ -300,38 +311,38 @@ handle_mime() {
             ## Preview as text conversion
             ## note: catdoc does not always work for .doc files
             ## catdoc: http://www.wagner.pp.ru/~vitus/software/catdoc/
-            catdoc -- "${FILE_PATH}" && exit 5
-            exit 1;;
+            catdoc -- "${FILE_PATH}" && exit $yeswh
+            exit $no;;
 
         ## DOCX, ePub, FB2 (using markdown)
         ## You might want to remove "|epub" and/or "|fb2" below if you have
         ## uncommented other methods to preview those formats
         *wordprocessingml.document|*/epub+zip|*/x-fictionbook+xml)
             ## Preview as markdown conversion
-            pandoc -s -t markdown -- "${FILE_PATH}" && exit 5
-            exit 1;;
+            pandoc -s -t markdown -- "${FILE_PATH}" && exit $yeswh
+            exit $no;;
 
         ## E-mails
         message/rfc822)
             ## Parsing performed by mu: https://github.com/djcb/mu
-            mu view -- "${FILE_PATH}" && exit 5
-            exit 1;;
+            mu view -- "${FILE_PATH}" && exit $yeswh
+            exit $no;;
 
         ## XLS
         *ms-excel)
             ## Preview as csv conversion
             ## xls2csv comes with catdoc:
             ##   http://www.wagner.pp.ru/~vitus/software/catdoc/
-            xls2csv -- "${FILE_PATH}" && exit 5
-            exit 1;;
+            xls2csv -- "${FILE_PATH}" && exit $yeswh
+            exit $no;;
 
         ## SQLite
         *sqlite3)
             ## Preview as text conversion
             sqlite_tables="$( sqlite3 "file:${FILE_PATH}?mode=ro" '.tables' )" \
-                || exit 1
+                || exit $no
             [ -z "${sqlite_tables}" ] &&
-                { echo "Empty SQLite database." && exit 5; }
+                { echo "Empty SQLite database." && exit $yeswh; }
             sqlite_show_query() {
                 sqlite-utils query "${FILE_PATH}" "${1}" --table --fmt fancy_grid \
                 || sqlite3 "file:${FILE_PATH}?mode=ro" "${1}" -header -column
@@ -410,13 +421,13 @@ handle_mime() {
                         fi
                     done
             fi
-            exit 5;;
+            exit $yeswh;;
 
         ## Text
         text/* | */xml)
             ## Syntax highlight
             if [[ "$( stat --printf='%s' -- "${FILE_PATH}" )" -gt "${HIGHLIGHT_SIZE_MAX}" ]]; then
-                exit 2
+                exit $text
             fi
             if [[ "$( tput colors )" -ge 256 ]]; then
                 local pygmentize_format='terminal256'
@@ -427,42 +438,42 @@ handle_mime() {
             fi
             env HIGHLIGHT_OPTIONS="${HIGHLIGHT_OPTIONS}" highlight \
                 --out-format="${highlight_format}" \
-                --force -- "${FILE_PATH}" && exit 5
+                --force -- "${FILE_PATH}" && exit $yeswh
             env COLORTERM=8bit bat --color=always --style="${BAT_STYLE}" \
-                -- "${FILE_PATH}" && exit 5
+                -- "${FILE_PATH}" && exit $yeswh
             pygmentize -f "${pygmentize_format}" -O "style=${PYGMENTIZE_STYLE}"\
-                -- "${FILE_PATH}" && exit 5
-            exit 2;;
+                -- "${FILE_PATH}" && exit $yeswh
+            exit $text;;
 
         ## DjVu
         image/vnd.djvu)
             ## Preview as text conversion (requires djvulibre)
-            djvutxt "${FILE_PATH}" | fmt -w "${PV_WIDTH}" && exit 5
-            exiftool "${FILE_PATH}" && exit 5
-            exit 1;;
+            djvutxt "${FILE_PATH}" | fmt -w "${PV_WIDTH}" && exit $yeswh
+            exiftool "${FILE_PATH}" && exit $yeswh
+            exit $no;;
 
         ## Image
         image/*)
             ## Preview as text conversion
             # img2txt --gamma=0.6 --width="${PV_WIDTH}" -- "${FILE_PATH}" && exit 4
-            exiftool "${FILE_PATH}" && exit 5
-            exit 1;;
+            exiftool "${FILE_PATH}" && exit $yeswh
+            exit $no;;
 
         ## Video and audio
         video/* | audio/*)
-            mediainfo "${FILE_PATH}" && exit 5
-            exiftool "${FILE_PATH}" && exit 5
-            exit 1;;
+            mediainfo "${FILE_PATH}" && exit $yeswh
+            exiftool "${FILE_PATH}" && exit $yeswh
+            exit $no;;
 
         ## ELF files (executables and shared objects)
         application/x-executable | application/x-pie-executable | application/x-sharedlib)
-            readelf -WCa "${FILE_PATH}" && exit 5
-            exit 1;;
+            readelf -Wa "${FILE_PATH}" && exit $yeswh
+            exit $no;;
     esac
 }
 
 handle_fallback() {
-    echo '----- File Type Classification -----' && file --dereference --brief -- "${FILE_PATH}" && exit 5
+    echo '----- File Type Classification -----' && file --dereference --brief -- "${FILE_PATH}" && exit $yeswh
 }
 
 
@@ -474,4 +485,4 @@ handle_extension
 handle_mime "${MIMETYPE}"
 handle_fallback
 
-exit 1
+exit $no
