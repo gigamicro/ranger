@@ -1204,16 +1204,16 @@ class Actions(  # pylint: disable=too-many-instance-attributes,too-many-public-m
         with open(path, 'rb') as fobj:
             data = fobj.read(count)
 
-        try:
-            import chardet
-        except ImportError:
-            pass
-        else:
-            result = chardet.detect(data)
-            guessed_encoding = result['encoding']
-            if guessed_encoding is not None:
-                # Add chardet's guess before our own.
-                encodings.insert(0, (guessed_encoding, 'replace'))
+        # try:
+        #     import chardet
+        # except ImportError:
+        #     pass
+        # else:
+        #     result = chardet.detect(data)
+        #     guessed_encoding = result['encoding']
+        #     if guessed_encoding is not None:
+        #         # Add chardet's guess before our own.
+        #         encodings.insert(0, (guessed_encoding, 'replace'))
 
         for (encoding, error_scheme) in encodings:
             try:
