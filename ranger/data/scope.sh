@@ -427,7 +427,7 @@ handle_mime() {
         text/* | */xml)
             ## Syntax highlight
             if [[ "$( stat --printf='%s' -- "${FILE_PATH}" )" -gt "${HIGHLIGHT_SIZE_MAX}" ]]; then
-                exit $text
+                cat -- "${FILE_PATH}" && exit $yeswh
             fi
             if [[ "$( tput colors )" -ge 256 ]]; then
                 local pygmentize_format='terminal256'
@@ -443,7 +443,7 @@ handle_mime() {
                 -- "${FILE_PATH}" && exit $yeswh
             pygmentize -f "${pygmentize_format}" -O "style=${PYGMENTIZE_STYLE}"\
                 -- "${FILE_PATH}" && exit $yeswh
-            exit $text;;
+            cat -- "${FILE_PATH}" && exit $yeswh;;
 
         ## DjVu
         image/vnd.djvu)
