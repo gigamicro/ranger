@@ -423,6 +423,11 @@ handle_mime() {
             fi
             exit $yeswh;;
 
+        ## Mozilla LZ4-compressed JSON
+        */x-lz4+json)
+            dejsonlz4 "${FILE_PATH}" | jq -C && exit $yeswh
+            exit $no;;
+
         ## Text
         text/* | */xml)
             ## Syntax highlight
