@@ -350,9 +350,10 @@ class FileSystemObject(  # pylint: disable=too-many-instance-attributes,too-many
             perms = ['-']
 
         mode = self.stat.st_mode
-        test = 0o0400
-        while test:  # will run 3 times because 0o400 >> 9 = 0
-            for what in "rwx":
+        test = 1<<-1+3* (4 if mode & 0o7000 else 3) # octet count
+        # mode.bit_length() ?
+        while test:
+            for what in "rwx" if test & 0o777 else "Xst" if test & 0o7000 else "???":
                 if mode & test:
                     perms.append(what)
                 else:
