@@ -350,14 +350,14 @@ handle_mime() {
             ## Display basic table information
             sqlite_rowcount_query="$(
                 sqlite3 "file:${FILE_PATH}?mode=ro" -noheader \
-                    'SELECT group_concat(
-                        "SELECT """ || name || """ AS tblname,
+                    "SELECT group_concat(
+                        'SELECT ''' || name || ''' AS tblname,
                                           count(*) AS rowcount
-                         FROM " || name,
-                        " UNION ALL "
+                         FROM ' || name,
+                        ' UNION ALL '
                     )
                     FROM sqlite_master
-                    WHERE type="table" AND name NOT LIKE "sqlite_%";'
+                    WHERE type='table' AND name NOT LIKE 'sqlite_%';"
             )"
             sqlite_show_query \
                 "SELECT tblname AS 'table', rowcount AS 'count',
