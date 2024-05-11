@@ -86,6 +86,7 @@ handle_extension() {
             mutool draw -F txt -i -- "${FILE_PATH}" 1-10 | \
               fmt -w "${PV_WIDTH}" && exit $yeswh
             exiftool "${FILE_PATH}" && exit $yeswh
+            ffprobe "${FILE_PATH}" && exit $yeswh
             exit $no;;
 
         ## BitTorrent
@@ -140,6 +141,7 @@ handle_extension() {
         dff|dsf|wv|wvc)
             mediainfo "${FILE_PATH}" && exit $yeswh
             exiftool "${FILE_PATH}" && exit $yeswh
+            ffprobe "${FILE_PATH}" && exit $yeswh
             ;; # Continue with next handler on failure
     esac
 }
@@ -455,6 +457,7 @@ handle_mime() {
             ## Preview as text conversion (requires djvulibre)
             djvutxt "${FILE_PATH}" | fmt -w "${PV_WIDTH}" && exit $yeswh
             exiftool "${FILE_PATH}" && exit $yeswh
+            ffprobe "${FILE_PATH}" && exit $yeswh
             exit $no;;
 
         ## Image
@@ -462,12 +465,14 @@ handle_mime() {
             ## Preview as text conversion
             # img2txt --gamma=0.6 --width="${PV_WIDTH}" -- "${FILE_PATH}" && exit 4
             exiftool "${FILE_PATH}" && exit $yeswh
+            ffprobe "${FILE_PATH}" && exit $yeswh
             exit $no;;
 
         ## Video and audio
         video/* | audio/*)
             mediainfo "${FILE_PATH}" && exit $yeswh
             exiftool "${FILE_PATH}" && exit $yeswh
+            ffprobe "${FILE_PATH}" && exit $yeswh
             exit $no;;
 
         ## ELF files (executables and shared objects)
