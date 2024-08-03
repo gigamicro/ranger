@@ -63,6 +63,7 @@ class FileSystemObject(  # pylint: disable=too-many-instance-attributes,too-many
     force_load = False
 
     is_device = False
+    is_block = False
     is_directory = False
     is_file = False
     is_fifo = False
@@ -315,6 +316,8 @@ class FileSystemObject(  # pylint: disable=too-many-instance-attributes,too-many
         fmt = mode & 0o170000
         if fmt in (0o020000, 0o060000):  # stat.S_IFCHR/BLK
             self.is_device = True
+            if fmt == 0o060000:
+                self.is_block = True
             self.size = 0
             self.infostring = 'dev'
         elif fmt == 0o010000:  # stat.S_IFIFO
@@ -346,18 +349,42 @@ class FileSystemObject(  # pylint: disable=too-many-instance-attributes,too-many
             perms = ['l']
         elif self.is_directory:
             perms = ['d']
+        elif self.is_fifo:
+            perms = ['p']
+        elif self.is_block:
+            perms = ['b']
+        elif self.is_device:
+            perms = ['c']
+        elif self.is_socket:
+            perms = ['s']
         else:
             perms = ['-']
 
         mode = self.stat.st_mode
-        test = 1<<-1+3* (4 if mode & 0o7000 else 3) # octet count
+        test = 0o400
         # mode.bit_length() ?
         while test:
-            for what in "rwx" if test & 0o777 else "Xst" if test & 0o7000 else "???":
+            for what in "rwx" if test & 0o777 else "sst" if test & 0o7000 else "???":
                 if mode & test:
-                    perms.append(what)
+                    if what=="x":
+                        if mode&0o4000 and test==0o100 or mode&0o2000 and test==0o010:
+                            perms.append("s")
+                        elif mode&0o1000 and test==0o001:
+                            perms.append("t")
+                        else:
+                            perms.append("x")
+                    else:
+                        perms.append(what)
                 else:
-                    perms.append('-')
+                    if what=="x":
+                        if mode&0o4000 and test==0o100 or mode&0o2000 and test==0o010:
+                            perms.append("S")
+                        elif mode&0o1000 and test==0o001:
+                            perms.append("T")
+                        else:
+                            perms.append("-")
+                    else:
+                        perms.append('-')
                 test >>= 1
 
         self.permissions = ''.join(perms)
