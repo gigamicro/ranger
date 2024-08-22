@@ -476,7 +476,7 @@ handle_mime() {
             exit $no;;
 
         ## ELF files (executables and shared objects)
-        application/x-executable | application/x-pie-executable | application/x-sharedlib)
+        application/x-executable | application/x-pie-executable | application/x-sharedlib | application/x-object)
             readelf -Wa "${FILE_PATH}" && exit $yeswh
             exit $no;;
     esac
