@@ -75,7 +75,7 @@ handle_extension() {
             exit $no;;
         7z)
             ## Avoid password prompt by providing empty password
-            7z l -p -- "${FILE_PATH}" && exit $yeswh
+            7zz l -p -- "${FILE_PATH}" && exit $yeswh
             exit $no;;
 
         ## PDF

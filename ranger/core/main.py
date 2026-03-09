@@ -250,13 +250,19 @@ https://github.com/ranger/ranger/issues
         # print the exit message if any
         if exit_msg:
             sys.stderr.write(exit_msg)
-        return exit_code  # pylint: disable=lost-exception
+
+    return exit_code  # pylint: disable=lost-exception
 
 
 def get_paths(args):
     if args.paths:
-        from urllib.parse import urlparse, unquote
-        paths = [unquote(urlparse(path).path) for path in args.paths]
+        prefix = 'file://'
+        paths = []
+        for path in args.paths:
+            if path.startswith(prefix):
+                paths.append(urllib.parse.unquote(urllib.parse.urlparse(path).path))
+            else:
+                paths.append(path)
     else:
         start_directory = os.environ.get('PWD')
         is_valid_start_directory = start_directory and os.path.exists(start_directory)

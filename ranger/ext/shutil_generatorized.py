@@ -185,8 +185,16 @@ def copy2(src, dst, overwrite=False, symlinks=False, make_safe_path=get_safe_pat
         copystat(src, dst)
 
 
-def copytree(src, dst,  # pylint: disable=too-many-locals,too-many-branches
-             symlinks=False, ignore=None, overwrite=False, make_safe_path=get_safe_path):
+def copytree(
+    # pylint: disable=too-many-locals,too-many-branches
+    # pylint: disable=too-many-positional-arguments
+    src,
+    dst,
+    symlinks=False,
+    ignore=None,
+    overwrite=False,
+    make_safe_path=get_safe_path,
+):
     """Recursively copy a directory tree using copy2().
 
     The destination directory must not already exist.
@@ -240,8 +248,14 @@ def copytree(src, dst,  # pylint: disable=too-many-locals,too-many-branches
                 copystat(srcname, dstname)
             elif os.path.isdir(srcname):
                 n = 0
-                for n in copytree(srcname, dstname, symlinks, ignore, overwrite,
-                                  make_safe_path):
+                for n in copytree(
+                    srcname,
+                    dstname,
+                    symlinks=symlinks,
+                    ignore=ignore,
+                    overwrite=overwrite,
+                    make_safe_path=make_safe_path,
+                ):
                     yield done + n
                 done += n
             else:
@@ -288,6 +302,7 @@ def move(src, dst, overwrite=False, make_safe_path=get_safe_path):
             # We might be on a case insensitive filesystem,
             # perform the rename anyway.
             os.rename(src, dst)
+            yield 0
             return
 
         real_dst = os.path.join(dst, _basename(src))
@@ -295,8 +310,9 @@ def move(src, dst, overwrite=False, make_safe_path=get_safe_path):
         real_dst = make_safe_path(real_dst)
     try:
         os.rename(src, real_dst)
+        yield 0
     except OSError:
-        if os.path.isdir(src):
+        if os.path.isdir(src) and not os.path.islink(src):
             if _destinsrc(src, dst):
                 raise Error("Cannot move a directory '%s' into itself '%s'." % (src, dst))
             for done in copytree(src, real_dst, symlinks=True, overwrite=overwrite,
