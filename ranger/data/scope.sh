@@ -66,7 +66,7 @@ handle_extension() {
         ## Archive
         a|ace|alz|arc|arj|bz|bz2|cab|cpio|deb|gz|jar|lha|lz|lzh|lzma|lzo|\
         rpm|rz|t7z|tar|tbz|tbz2|tgz|tlz|txz|tZ|tzo|war|xpi|xz|Z|zip|zst)
-            atool --list -- "${FILE_PATH}" && exit $yeswh
+            atool --list -- "${FILE_PATH}" 2>/dev/null && exit $yeswh
             bsdtar --list --file "${FILE_PATH}" && exit $yeswh
             exit $no;;
         rar)
@@ -234,8 +234,8 @@ handle_image() {
                 convert -- "${preview_png}" "${IMAGE_CACHE_PATH}" \
                     && rm "${preview_png}" \
                     && exit $imgc
-            else
-                exit $no
+            # else
+            #     exit $no
             fi
             ;;
 
@@ -346,7 +346,8 @@ handle_mime() {
             [ -z "${sqlite_tables}" ] &&
                 { echo "Empty SQLite database." && exit $yeswh; }
             sqlite_show_query() {
-                sqlite-utils query "${FILE_PATH}" "${1}" --table --fmt fancy_grid \
+                #sqlite-utils query "${FILE_PATH}" "${1}" --table --fmt fancy_grid \
+                false \
                 || sqlite3 "file:${FILE_PATH}?mode=ro" "${1}" -header -column
             }
             ## Display basic table information
@@ -430,12 +431,18 @@ handle_mime() {
             dejsonlz4 "${FILE_PATH}" | jq -C && exit $yeswh
             exit $no;;
 
+        ## JSON
+        */json)
+            jq --color-output . "${FILE_PATH}" && exit $yeswh
+            python -m json.tool -- "${FILE_PATH}" && exit $yeswh
+            ;;
+
         ## Text
-        text/* | */xml)
+        text/* | */xml | */json)
             ## Syntax highlight
-            if [[ "$( stat --printf='%s' -- "${FILE_PATH}" )" -gt "${HIGHLIGHT_SIZE_MAX}" ]]; then
-                cat -- "${FILE_PATH}" && exit $yeswh
-            fi
+            # if [[ "$( stat --printf='%s' -- "${FILE_PATH}" )" -gt "${HIGHLIGHT_SIZE_MAX}" ]]; then
+            #     cat -- "${FILE_PATH}" && exit $yeswh
+            # fi
             if [[ "$( tput colors )" -ge 256 ]]; then
                 local pygmentize_format='terminal256'
                 local highlight_format='xterm256'
@@ -445,11 +452,11 @@ handle_mime() {
             fi
             env HIGHLIGHT_OPTIONS="${HIGHLIGHT_OPTIONS}" highlight \
                 --out-format="${highlight_format}" \
-                --force -- "${FILE_PATH}" && exit $yeswh
+                --force -- "${FILE_PATH}" 2>/dev/null && exit $yeswh
             env COLORTERM=8bit bat --color=always --style="${BAT_STYLE}" \
-                -- "${FILE_PATH}" && exit $yeswh
+                -- "${FILE_PATH}" 2>/dev/null && exit $yeswh
             pygmentize -f "${pygmentize_format}" -O "style=${PYGMENTIZE_STYLE}"\
-                -- "${FILE_PATH}" && exit $yeswh
+                -- "${FILE_PATH}" 2>/dev/null && exit $yeswh
             cat -- "${FILE_PATH}" && exit $yeswh;;
 
         ## DjVu
@@ -488,6 +495,9 @@ handle_fallback() {
 
 
 MIMETYPE="$( file --dereference --brief --mime-type -- "${FILE_PATH}" )"
+
+. ~/.config/ranger/scope_exec.sh
+
 if [[ "${PV_IMAGE_ENABLED}" == 'True' ]]; then
     handle_image "${MIMETYPE}"
 fi
